@@ -4,15 +4,19 @@ const { buildSchema } = require("graphql")
 // const { schema } = require("./schema");
 const resolvers = require("./resolvers");
 
+
+const dice = 3;
+const sides = 6;
+
 // スキーマ言語を使用して、スキーマを初期化する
 const schema = buildSchema(`
   type Query {
     quoteOfTheDay: String,
     random: Float!,
-    rollThreeDice: [Int]
-  }
-  type Query {
-    rollDice(numDice: Int!, numSides: Int): [Int]
+    rollThreeDice: [Int],
+    query RollDice($dice: Int!, $sides: Int) {
+      rollDice(numDice: $dice, numSides: $sides): [Int]
+    }
   }
 `);
 
@@ -26,6 +30,13 @@ const root = {
   },
   rollThreeDice: () => {
     return [1, 2, 3].map(_ => 1 + Math.floor(Math.random() * 6));
+  },
+  rollDice: ({numDice, numSides}) => {
+    let output = [];
+    for (let i = 0; i < numDice; i++) {
+      output.push(1 + Math.floor(Math.random() * (numSides || 6)));
+    }
+    return output;
   }
 };
 
@@ -41,8 +52,8 @@ app.use(
 );
 
 
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 4200;
 
 app.listen(port);
 
-console.log(`🚀 Server ready at http://localhost:4000/graphql`);
+console.log(`🚀 Server ready at http://localhost:4200/graphql`);
