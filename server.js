@@ -7,21 +7,50 @@ const resolvers = require("./resolvers");
 
 const dice = 3;
 const sides = 6;
-
+const query = `query RollDice($dice: Int!, $sides: Int) {
+  rollDice(numDice: $dice, numSides: $sides)
+}`
 // スキーマ言語を使用して、スキーマを初期化する
 const schema = buildSchema(`
   type Query {
     quoteOfTheDay: String,
     random: Float!,
     rollThreeDice: [Int],
-    query RollDice($dice: Int!, $sides: Int) {
-      rollDice(numDice: $dice, numSides: $sides): [Int]
-    }
+    getDie(numSides: Int): RandomDie
+  }
+
+  type RandomDie {
+    numSides: Int!
+    rollOnce: Int!
+    roll(numRolls: Int!): [Int]
   }
 `);
 
+// This class implements the RandomDie GraphQL type
+class RandomDie {
+  constructor(numSides) {
+    this.numSides = numSides;
+  }
+
+  rollOnce() {
+    return 1 + Math.floor(Math.random() * this.numSides);
+  }
+
+  roll({numRolls}) {
+    let output = [];
+    for (let i = 0; i < numRolls; i++) {
+      output.push(this.rollOnce());
+    }
+    return output;
+  }
+}
+
+
 // ルートは、APIエンドポイントごとにリゾルバー関数を提供します
 const root = {
+  getDie: ({numRolls}) => {
+    return new RandomDie(numSides || 6);
+  },
   quoteOfTheDay: () => {
     return Math.random() < 0.5 ? 'Take it easy' : 'Salvation lies within';
   },
