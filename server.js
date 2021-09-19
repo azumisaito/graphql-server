@@ -17,7 +17,8 @@ const schema = buildSchema(`
     random: Float!,
     rollThreeDice: [Int],
     getDie(numSides: Int): RandomDie,
-    getMessage(id: ID!): Message
+    getMessage(id: ID!): Message,
+    ip: String
   }
 
   input MessageInput {
@@ -42,6 +43,11 @@ const schema = buildSchema(`
     updateMessage(id: ID!, input: MessageInput): Message
   }
 `);
+
+const loggingMiddleware = (req, res, next) => {
+  console.log('ip:', req.ip);
+  next();
+}
 
 // This class implements the RandomDie GraphQL type
 class RandomDie {
@@ -117,9 +123,13 @@ const root = {
     fakeDatabase[id] = input;
     return new Message(id, input);
   },
+  ip: function (args, request) {
+    return request.ip;
+  }
 };
 
 const app = express();
+app.use(loggingMiddleware);
 app.use(
   "/graphql",
   graphqlHTTP({
