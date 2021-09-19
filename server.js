@@ -3,7 +3,7 @@ const { graphqlHTTP } = require("express-graphql");
 const { buildSchema } = require("graphql")
 // const { schema } = require("./schema");
 const resolvers = require("./resolvers");
-
+const fakeDatabase = {};
 
 const dice = 3;
 const sides = 6;
@@ -16,13 +16,30 @@ const schema = buildSchema(`
     quoteOfTheDay: String,
     random: Float!,
     rollThreeDice: [Int],
-    getDie(numSides: Int): RandomDie
+    getDie(numSides: Int): RandomDie,
+    getMessage(id: ID!): Message
+  }
+
+  input MessageInput {
+    content: String
+    author: String
+  }
+
+  type Message {
+    id: ID!
+    content: String
+    author: String
   }
 
   type RandomDie {
     numSides: Int!
     rollOnce: Int!
     roll(numRolls: Int!): [Int]
+  }
+
+  type Mutation {
+    createMessage(input: MessageInput): Message
+    updateMessage(id: ID!, input: MessageInput): Message
   }
 `);
 
@@ -45,6 +62,14 @@ class RandomDie {
   }
 }
 
+// If Message had any complex fields, we'd put them on this object.
+class Message {
+  constructor(id, {content, author}) {
+    this.id = id;
+    this.content = content;
+    this.author = author;
+  }
+}
 
 // ルートは、APIエンドポイントごとにリゾルバー関数を提供します
 const root = {
@@ -66,7 +91,32 @@ const root = {
       output.push(1 + Math.floor(Math.random() * (numSides || 6)));
     }
     return output;
-  }
+  },
+  setMessage: ({message}) => {
+    fakeDatabase.message = message;
+    return message;
+  },
+  getMessage: ({id}) => {
+    if (!fakeDatabase[id]) {
+      throw new Error('no message exists with id ' + id);
+    }
+    return new Message(id, fakeDatabase[id]);
+  },
+  createMessage: ({input}) => {
+    // Create a random id for our "database".
+    var id = require('crypto').randomBytes(10).toString('hex');
+
+    fakeDatabase[id] = input;
+    return new Message(id, input);
+  },
+  updateMessage: ({id, input}) => {
+    if (!fakeDatabase[id]) {
+      throw new Error('no message exists with id ' + id);
+    }
+    // This replaces all old data, but some apps might want partial update.
+    fakeDatabase[id] = input;
+    return new Message(id, input);
+  },
 };
 
 const app = express();
